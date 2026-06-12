@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 interface Props {
   onSend: (content: string) => Promise<void>;
@@ -9,15 +9,20 @@ interface Props {
 export default function MessageInput({ onSend }: Props) {
   const [value, setValue] = useState("");
   const [sending, setSending] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
   const MAX = 200;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!value.trim() || sending) return;
     setSending(true);
-    await onSend(value.trim());
-    setValue("");
-    setSending(false);
+    try {
+      await onSend(value.trim());
+      setValue("");
+    } finally {
+      setSending(false);
+      requestAnimationFrame(() => inputRef.current?.focus());
+    }
   };
 
   return (
@@ -25,12 +30,13 @@ export default function MessageInput({ onSend }: Props) {
       <form onSubmit={handleSubmit} className="flex items-center gap-2">
         <div className="flex-1">
           <input
+            ref={inputRef}
             type="text"
             value={value}
             onChange={(e) => setValue(e.target.value.slice(0, MAX))}
             placeholder="메시지를 입력하세요... (기록에 남지 않습니다)"
             className="w-full border border-gray-400 rounded px-3 py-1.5 text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none focus:border-green-500"
-            disabled={sending}
+            readOnly={sending}
           />
         </div>
         <button
